@@ -23,36 +23,18 @@ require('./db/config')
 require('dotenv').config();
 
 
-app.post('/api/setTerms', async (req, res) => {
+app.post('/api/set-terms', async (req, res) => {
+  const { session, term } = req.body;
+
   try {
-    // Extract the values from the request body
-    const {session, term } = req.body;
-
-    // Find the existing document that matches the provided term and selectedClass
-    let existingTerm = await SetTerm.findOne({session: session, term: term });
-
-    // If no existing document found, create a new one
-    if (!existingTerm) {
-      existingTerm = new JssOneResult({ term: term, session: session });
-    }
-
-    // Update the results field of the existing or newly created document
- 
-    existingTerm.term = term;
-    existingTerm.session = session;
-   
-
-    // Save the updated document to the database
-    await existingTerm.save();
-
-    // Send a success response
-    res.status(200).json({ message: 'Term and session updated successfully' });
+    const newSetTerm = new SetTerm({ session, term });
+    await newSetTerm.save();
+    res.json({ success: true, message: 'Term set successfully' });
   } catch (error) {
-    // Handle errors
-    console.error('Error updating term:', error);
-    res.status(500).json({ error: 'Failed to update term' });
+    console.error('Error:', error);
+    res.status(500).json({ success: false, message: 'Error setting term' });
   }
-  });
+});
 
   app.post('/api/saveResults', async (req, res) => {
     try {
@@ -123,6 +105,19 @@ app.post('/api/setTerms', async (req, res) => {
       res.status(200).json(term);
     } catch (error) {
       console.error('Error fetching term:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  app.put('/api/updateTerm', async (req, res) => {
+    try {
+      const { session, term } = req.body;
+  
+      // Update all documents in the collection with the provided values
+      await SetTerm.updateMany({}, { session, term });
+  
+      res.status(200).json({ message: 'Term updated successfully' });
+    } catch (error) {
+      console.error('Error updating Term:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
