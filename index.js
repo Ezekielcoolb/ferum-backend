@@ -1,5 +1,6 @@
 const express = require('express');
 const SetTerm = require('./db/SetTerm')
+const Results = require('./db/Result')
 const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -23,16 +24,34 @@ require('dotenv').config();
 
 
 app.post('/api/setTerms', async (req, res) => {
-    const { session, term } = req.body;
-  
-    try {
-      const newSetTerm = new SetTerm({ session, term });
-      await newSetTerm.save();
-      res.json({ success: true, message: 'Term set successfully' });
-    } catch (error) {
-      console.error('Error:', error);
-      res.status(500).json({ success: false, message: 'Error setting term' });
+  try {
+    // Extract the values from the request body
+    const {session, term } = req.body;
+
+    // Find the existing document that matches the provided term and selectedClass
+    let existingTerm = await SetTerm.findOne({session: session, term: term });
+
+    // If no existing document found, create a new one
+    if (!existingTerm) {
+      existingTerm = new JssOneResult({ term: term, session: session });
     }
+
+    // Update the results field of the existing or newly created document
+ 
+    existingTerm.term = term;
+    existingTerm.session = session;
+   
+
+    // Save the updated document to the database
+    await existingTerm.save();
+
+    // Send a success response
+    res.status(200).json({ message: 'Term and session updated successfully' });
+  } catch (error) {
+    // Handle errors
+    console.error('Error updating term:', error);
+    res.status(500).json({ error: 'Failed to update term' });
+  }
   });
 
   app.post('/api/saveResults', async (req, res) => {
@@ -41,11 +60,11 @@ app.post('/api/setTerms', async (req, res) => {
       const {currentSession, term, selectedClass, results } = req.body;
   
       // Find the existing document that matches the provided term and selectedClass
-      let existingResults = await JssOneResult.findOne({currentSession: currentSession, term: term, selectedClass: selectedClass });
+      let existingResults = await Results.findOne({currentSession: currentSession, term: term, selectedClass: selectedClass });
   
       // If no existing document found, create a new one
       if (!existingResults) {
-        existingResults = new JssOneResult({ term: term, selectedClass: selectedClass });
+        existingResults = new Results({currentSession: currentSession, term: term, selectedClass: selectedClass });
       }
   
       // Update the results field of the existing or newly created document
@@ -61,8 +80,8 @@ app.post('/api/setTerms', async (req, res) => {
       res.status(200).json({ message: 'Results updated successfully' });
     } catch (error) {
       // Handle errors
-      console.error('Error updating JSS One results:', error);
-      res.status(500).json({ error: 'Failed to update JSS One results' });
+      console.error('Error updating  results:', error);
+      res.status(500).json({ error: 'Failed to update results' });
     }
   });
 
@@ -76,7 +95,7 @@ app.post('/api/setTerms', async (req, res) => {
        const selectedClass = req.params.selectedClass;
   
        // Find documents where the value at index 0 in the results array matches the provided value
-       const results = await JssOneResult.find({currentSession: currentSession, term: term, selectedClass: selectedClass });
+       const results = await Results.find({currentSession: currentSession, term: term, selectedClass: selectedClass });
    
        if (!results) {
          // If no matching documents found, send a 404 error response
@@ -87,8 +106,8 @@ app.post('/api/setTerms', async (req, res) => {
        res.status(200).json({ results });
      } catch (error) {
        // Handle errors
-       console.error('Error fetching JSS One results:', error);
-       res.status(500).json({ error: 'Failed to fetch JSS One results' });
+       console.error('Error fetching results:', error);
+       res.status(500).json({ error: 'Failed to fetch  results' });
      }
   });
 
