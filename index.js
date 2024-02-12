@@ -1,6 +1,7 @@
 const express = require('express');
 const SetTerm = require('./db/SetTerm')
 const Results = require('./db/Result')
+const Payment = require('./db/Payment')
 const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -22,6 +23,16 @@ app.use(cors());
 require('./db/config')
 require('dotenv').config();
 
+
+app.post('/api/paymentreference', async (req, res) => {
+  try {
+    const payment = new Payment(req.body);
+    await payment.save();
+    res.status(201).json({ message: 'Payment reference saved successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 app.post('/api/set-terms', async (req, res) => {
   const { session, term } = req.body;
