@@ -120,20 +120,23 @@ app.post('/api/set-terms', async (req, res) => {
     }
   });
 
-  app.post('/api/confirmpayment', async (req, res) => {
+  app.get('/api/confirmpayment/reference', async (req, res) => {
     try {
-      const { reference, transaction } = req.body;
-      const payment = await Payment.findOne({ reference, transaction });
+      const reference = req.params.reference;
   
-      if (payment) {
-        const token = jwt.sign({ email: payment.reference, userId: payment.id }, secretKey, { expiresIn: '1h' });
-        res.status(200).json({ message: 'Reference and transaction id confirmed',  token: token});
-      } else {
-        res.status(401).json({ message: 'Invalid reference or transaction Id' });
+      // Query the database for the payment with the provided reference
+      const payment = await Payment.findOne({ reference });
+  
+      // If no payment found with the provided reference, return a 404 status
+      if (!payment) {
+        return res.status(404).json({ message: 'Payment reference ID not found not found' });
       }
+  
+      // If payment found, return it in the response
+      res.json(payment);
     } catch (error) {
-      console.error('Error during comfirmation:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
     }
   });
 
