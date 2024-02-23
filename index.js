@@ -1,7 +1,11 @@
 const express = require('express');
 const SetTerm = require('./db/SetTerm')
+const File = require('./db/File')
 const Results = require('./db/Result')
 const Payment = require('./db/Payment')
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -22,6 +26,31 @@ app.use(cors());
 // app.use(express.static('client/build'));
 require('./db/config')
 require('dotenv').config();
+
+// Multer setup
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// Endpoint for uploading files
+app.post('/uploadAssignment', upload.single('file'), async (req, res) => {
+  try {
+    const { originalname, buffer } = req.file;
+    const fileType = path.extname(originalname).toLowerCase().slice(1);
+
+    const newFile = new File({
+      name: originalname,
+      type: fileType,
+      data: buffer,
+    });
+
+    await newFile.save();
+    res.status(201).send('File uploaded successfully');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal server error');
+  }
+});
+
 
 
 app.post('/api/paymentreference', async (req, res) => {
@@ -79,6 +108,17 @@ app.post('/api/set-terms', async (req, res) => {
   });
 
 
+// Endpoint for fetching files
+app.get('/assignmentFiles', async (req, res) => {
+  try {
+    const files = await File.find();
+    res.json(files);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Internal server error');
+  }
+});
+
   app.get('/api/studentsresults/:currentSession/:term/:selectedClass', async (req, res) => {
     try {
     
@@ -120,7 +160,7 @@ app.post('/api/set-terms', async (req, res) => {
     }
   });
 
-  app.get('/api/confirmpayment/reference', async (req, res) => {
+  app.get('/api/confirmpayment/:reference', async (req, res) => {
     try {
       const reference = req.params.reference;
   
