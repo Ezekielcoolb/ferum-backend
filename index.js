@@ -169,15 +169,15 @@ app.post('/api/set-terms', async (req, res) => {
 
 
 // Endpoint for fetching files
-app.get('/assignmentFiles', async (req, res) => {
-  try {
-    const files = await File.find();
-    res.json(files);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
-  }
-});
+// app.get('/assignmentFiles', async (req, res) => {
+//   try {
+//     const files = await File.find();
+//     res.json(files);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send('Internal server error');
+//   }
+// });
 
   app.get('/api/studentsresults/:currentSession/:term/:selectedClass', async (req, res) => {
     try {

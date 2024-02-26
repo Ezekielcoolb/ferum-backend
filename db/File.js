@@ -3,50 +3,50 @@ const mongoose = require('mongoose');
 const answerSchema = new mongoose.Schema({
     admission: {
         type: String,
-        required: true
+        // required: true
     },
     firstname: {
         type: String,
-        required: true
+        // required: true
     },
     surname: {
         type: String,
-        required: true
+        // required: true
     },
     datePosted: {
-        type: Date,
-        default: Date.now
+        type: String,
+        // default: Date.now
     },
     answerImage: {
         type: String, // Storing image URL
-        required: true
+        // required: true
     }
 });
 
 const assignmentSchema = new mongoose.Schema({
     subjectCode: {
         type: String,
-        required: true
+        // required: true
     },
     dateGiven: {
         type: String,
-        required: true
+        // required: true
     },
     questionText: {
         type: String,
-        required: true
+        // required: true
     },
     questionImage: {
         type: String, // Storing image URL
-        required: true
+        // required: true
     },
     correctionText: {
         type: String,
-        required: true
+        // required: true
     },
     correctionImage: {
         type: String, // Storing image URL
-        required: true
+        // required: true
     },
     answers: [answerSchema] // Array of answer objects
 });
