@@ -1,6 +1,6 @@
 const express = require('express');
 const SetTerm = require('./db/SetTerm')
-const File = require('./db/File')
+const Assignment = require('./db/File')
 const Results = require('./db/Result')
 const Payment = require('./db/Payment')
 const multer = require('multer');
@@ -28,30 +28,90 @@ require('./db/config')
 require('dotenv').config();
 
 // Multer setup
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
 
-// Endpoint for uploading files
-app.post('/uploadAssignment', upload.single('file'), async (req, res) => {
-  try {
-    const { originalname, buffer } = req.file;
-    const fileType = path.extname(originalname).toLowerCase().slice(1);
-
-    const newFile = new File({
-      name: originalname,
-      type: fileType,
-      data: buffer,
-    });
-
-    await newFile.save();
-    res.status(201).send('File uploaded successfully');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
+const upload = multer({ 
+  storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+          cb(null, 'uploads/'); // Specify the folder to store uploaded images
+      },
+      filename: (req, file, cb) => {
+          cb(null, Date.now() + '-' + file.originalname); // Generate a unique filename
+      }
+  }),
+  fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+          cb(null, true);
+      } else {
+          cb(new Error('Only image files are allowed.'));
+      }
   }
 });
 
+// POST route to handle assignment creation with file uploads
+app.post('/api/assignments', upload.fields([
+  { name: 'questionImage', maxCount: 1 }, // Single file for questionImage
+  { name: 'correctionImage', maxCount: 1 }, // Single file for correctionImage
+  { name: 'answerImage', maxCount: 1 } // Single file for answerImage
+]), async (req, res) => {
+  try {
+      // Extract text data from request body
+      const { subjectCode, dateGiven, questionText, correctionText } = req.body;
 
+      // Create a new assignment instance
+      const newAssignment = new Assignment({
+          subjectCode,
+          dateGiven,
+          questionText,
+          questionImage: req.files['questionImage'][0].path, // Path to uploaded questionImage
+          correctionText,
+          correctionImage: req.files['correctionImage'][0].path, // Path to uploaded correctionImage
+          answers: [{
+              admission: req.body.admission,
+              firstname: req.body.firstname,
+              surname: req.body.surname,
+              answerImage: req.files['answerImage'][0].path // Path to uploaded answerImage
+          }]
+      });
+
+      // Save the assignment to the database
+      await newAssignment.save();
+
+      res.status(201).json({ message: 'Assignment created successfully' });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST route to handle uploading answers
+app.post('/api/studentanswers/:subjectCode', upload.single('answerImage'), async (req, res) => {
+  try {
+      const subjectCode = req.params.subjectCode;
+      const { admission, firstname, surname } = req.body;
+
+      // Check if the assignment exists
+      const assignment = await Assignment.findOne({ subjectCode });
+      if (!assignment) {
+          return res.status(404).json({ message: 'Assignment not found' });
+      }
+
+      // Add the new answer to the answers array
+      assignment.answers.push({
+          admission,
+          firstname,
+          surname,
+          answerImage: req.file ? req.file.path : null // Path to uploaded answerImage if available
+      });
+
+      // Save the updated assignment
+      await assignment.save();
+
+      res.status(201).json({ message: 'Answer uploaded successfully', assignment });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 app.post('/api/paymentreference', async (req, res) => {
   try {
@@ -179,6 +239,21 @@ app.get('/assignmentFiles', async (req, res) => {
       res.status(500).json({ message: 'Internal server error' });
     }
   });
+  app.get('/api/allpayments', async (req, res) => {
+    try {
+      
+      const payment = await Payment.find();
+  
+      if (!payment ) {
+        return res.status(404).json({ message: 'payment not found' });
+      }
+  
+      res.status(200).json(term);
+    } catch (error) {
+      console.error('Error fetching payment:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   app.put('/api/updateTerm', async (req, res) => {
     try {
@@ -197,3 +272,35 @@ app.get('/assignmentFiles', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
   });
+
+
+  // PATCH route to handle partial updates by subjectCode
+app.patch('/studentassignments/:subjectCode', upload.fields([
+  { name: 'correctionImage', maxCount: 1 } // Single file for correctionImage
+]), async (req, res) => {
+  try {
+      const subjectCode = req.params.subjectCode;
+      const { correctionText } = req.body;
+
+      // Check if correctionText or correctionImage is provided in the request
+      const updateFields = {};
+      if (correctionText) {
+          updateFields.correctionText = correctionText;
+      }
+      if (req.files['correctionImage'] && req.files['correctionImage'].length > 0) {
+          updateFields.correctionImage = req.files['correctionImage'][0].path;
+      }
+
+      // Update the assignment with the provided fields
+      const updatedAssignment = await Assignment.findOneAndUpdate({ subjectCode }, updateFields, { new: true });
+
+      if (!updatedAssignment) {
+          return res.status(404).json({ message: 'Assignment not found' });
+      }
+
+      res.status(200).json({ message: 'Assignment updated successfully', updatedAssignment });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+});
