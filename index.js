@@ -48,30 +48,13 @@ const upload = multer({
 });
 
 // POST route to handle assignment creation with file uploads
-app.post('/api/assignments', upload.fields([
-  { name: 'questionImage', maxCount: 1 }, // Single file for questionImage
-  { name: 'correctionImage', maxCount: 1 }, // Single file for correctionImage
-  { name: 'answerImage', maxCount: 1 } // Single file for answerImage
-]), async (req, res) => {
+app.post('/api/assignments', async (req, res) => {
   try {
       // Extract text data from request body
-      const { subjectCode, dateGiven, questionText, correctionText } = req.body;
+      // const { subjectCode, dateGiven, questionText, correctionText } = req.body;
 
       // Create a new assignment instance
-      const newAssignment = new Assignment({
-          subjectCode,
-          dateGiven,
-          questionText,
-          questionImage: req.files['questionImage'][0].path, // Path to uploaded questionImage
-          correctionText,
-          correctionImage: req.files['correctionImage'][0].path, // Path to uploaded correctionImage
-          answers: [{
-              admission: req.body.admission,
-              firstname: req.body.firstname,
-              surname: req.body.surname,
-              answerImage: req.files['answerImage'][0].path // Path to uploaded answerImage
-          }]
-      });
+      const newAssignment = new Assignment(req.body);
 
       // Save the assignment to the database
       await newAssignment.save();

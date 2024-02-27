@@ -1,53 +1,20 @@
 const mongoose = require('mongoose');
 
 const answerSchema = new mongoose.Schema({
-    admission: {
-        type: String,
-        // required: true
-    },
-    firstname: {
-        type: String,
-        // required: true
-    },
-    surname: {
-        type: String,
-        // required: true
-    },
-    datePosted: {
-        type: String,
-        // default: Date.now
-    },
-    answerImage: {
-        type: String, // Storing image URL
-        // required: true
-    }
+    admission: String,
+    firstname: String,
+    surname: String,
+    datePosted: String,
+    answerImage: String,
 });
 
 const assignmentSchema = new mongoose.Schema({
-    subjectCode: {
-        type: String,
-        // required: true
-    },
-    dateGiven: {
-        type: String,
-        // required: true
-    },
-    questionText: {
-        type: String,
-        // required: true
-    },
-    questionImage: {
-        type: String, // Storing image URL
-        // required: true
-    },
-    correctionText: {
-        type: String,
-        // required: true
-    },
-    correctionImage: {
-        type: String, // Storing image URL
-        // required: true
-    },
+    subjectCode: String,
+    dateGiven: String,
+    questionText: String,
+    questionImage: String,
+    correctionText: String,
+    correctionImage: String,
     answers: [answerSchema] // Array of answer objects
 });
 
