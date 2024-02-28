@@ -27,42 +27,32 @@ app.use(cors());
 require('./db/config')
 require('dotenv').config();
 
-// Multer setup
-
-const upload = multer({ 
-  storage: multer.diskStorage({
-      destination: (req, file, cb) => {
-          cb(null, 'uploads/'); // Specify the folder to store uploaded images
-      },
-      filename: (req, file, cb) => {
-          cb(null, Date.now() + '-' + file.originalname); // Generate a unique filename
-      }
-  }),
-  fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) {
-          cb(null, true);
-      } else {
-          cb(new Error('Only image files are allowed.'));
-      }
+// Set up multer storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
   }
 });
 
 // POST route to handle assignment creation with file uploads
-app.post('/api/assignments', async (req, res) => {
+app.post('/api/assignments/upload', upload.single('questionImage'), async (req, res) => {
   try {
-      // Extract text data from request body
-      // const { subjectCode, dateGiven, questionText, correctionText } = req.body;
+    const { questionText } = req.body;
+    const questionImage = req.file.path; // Assuming the file path is stored in req.file
 
-      // Create a new assignment instance
-      const newAssignment = new Assignment(req.body);
+    const question = new Assignment({
+      questionText,
+      questionImage
+    });
 
-      // Save the assignment to the database
-      await newAssignment.save();
-
-      res.status(201).json({ message: 'Assignment created successfully' });
-  } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Internal server error' });
+    await question.save();
+    res.status(201).send('Question uploaded successfully.');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
   }
 });
 
