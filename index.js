@@ -37,6 +37,8 @@ const storage = multer.diskStorage({
   }
 });
 
+const upload = multer({ storage: storage });
+
 // POST route to handle assignment creation with file uploads
 app.post('/api/assignments/upload', upload.single('questionImage'), async (req, res) => {
   try {
