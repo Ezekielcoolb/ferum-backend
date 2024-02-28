@@ -28,6 +28,7 @@ require('./db/config')
 require('dotenv').config();
 
 // Set up multer storage
+// Multer configuration for handling file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'uploads/');
@@ -38,20 +39,58 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+app.use(upload.fields([{ name: 'questionImage', maxCount: 1 }, { name: 'correctionImage', maxCount: 1 }, { name: 'answerImage', maxCount: 1 }])); // Use Multer middleware for handling file uploads
 
 // POST route to handle assignment creation with file uploads
-app.post('/api/assignments/upload', upload.single('questionImage'), async (req, res) => {
+app.post('/api/assignments', async (req, res) => {
   try {
-    const { questionText } = req.body;
-    const questionImage = req.file.path; // Assuming the file path is stored in req.file
+    const { subjectCode, dateGiven, questionText, correctionText, answers } = req.body;
+    let questionImage = null;
+    let correctionImage = null;
 
-    const question = new Assignment({
-      questionText,
-      questionImage
+    if (req.files && req.files['questionImage']) {
+      questionImage = req.files['questionImage'][0].path; // Get the path of question image
+    }
+
+    if (req.files && req.files['correctionImage']) {
+      correctionImage = req.files['correctionImage'][0].path; // Get the path of correction image
+    }
+
+    let formattedAnswers = []; // Default to an empty array
+
+    if (answers && answers.length > 0) {
+      formattedAnswers = answers.map(answer => {
+        const formattedAnswer = {
+          admission: answer.admission,
+          firstname: answer.firstname,
+          surname: answer.surname,
+          datePosted: answer.datePosted,
+          answerImage: null // Set answerImage to null by default
+        };
+        // Check if answerImage is present in the answer object
+        if (answer.answerImage && req.files && req.files[answer.answerImage]) {
+          formattedAnswer.answerImage = req.files[answer.answerImage][0].path; // Get the path of answer image
+        }
+        return formattedAnswer;
+      });
+    }
+
+    // Map over the answers array to format answer objects properly
+     
+
+    const assignment = new Assignment({ 
+      subjectCode, 
+      dateGiven, 
+      questionText, 
+      questionImage, 
+      correctionText, 
+      correctionImage, 
+      answers: formattedAnswers
     });
 
-    await question.save();
-    res.status(201).send('Assignment uploaded successfully.');
+    await assignment.save();
+
+    res.status(201).send('Assignment data saved successfully.');
   } catch (err) {
     console.error(err);
     res.status(500).send('Server Error');
