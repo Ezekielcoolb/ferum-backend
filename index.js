@@ -49,7 +49,7 @@ app.post('/api/assignments/upload', upload.single('questionImage'), async (req, 
     });
 
     await question.save();
-    res.status(201).send('Question uploaded successfully.');
+    res.status(201).send('Assignment uploaded successfully.');
   } catch (err) {
     console.error(err);
     res.status(500).send('Server Error');
