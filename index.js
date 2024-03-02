@@ -21,22 +21,20 @@ const port = process.env.PORT || 10000;
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(cors());
-
+app.use(express.static("public"))
 // Serve your React app (build it first)
-// app.use(express.static('client/build'));
+app.use(express.static('client/build'));
 require('./db/config')
 require('dotenv').config();
 
 // Set up multer storage
 // Multer configuration for handling file uploads
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
+  destination: "public/uploads",
+  filename: (req, file, cb) => {
+      cb(null, file.filename + "_" + Date.now() + path.extname(file.originalname))
   }
-});
+})
 
 const upload = multer({ storage: storage });
 app.use(upload.fields([{ name: 'questionImage', maxCount: 1 }, { name: 'correctionImage', maxCount: 1 }, { name: 'answerImage', maxCount: 1 }])); // Use Multer middleware for handling file uploads
@@ -44,17 +42,22 @@ app.use(upload.fields([{ name: 'questionImage', maxCount: 1 }, { name: 'correcti
 // POST route to handle assignment creation with file uploads
 app.post('/api/assignments', async (req, res) => {
   try {
+    
     const { subjectCode, dateGiven, questionText, correctionText, answers } = req.body;
     let questionImage = null;
     let correctionImage = null;
 
     if (req.files && req.files['questionImage']) {
       questionImage = req.files['questionImage'][0].path; // Get the path of question image
+      const { filename, path: filepath } = req.files['questionImage'][0];
+      questionImage = { filename, filepath };
     }
 
     if (req.files && req.files['correctionImage']) {
       correctionImage = req.files['correctionImage'][0].path; // Get the path of correction image
-    }
+      const { filename, path: filepath } = req.files['correctionImage'][0];
+      correctionImage = { filename, filepath };
+    } 
 
     let formattedAnswers = []; // Default to an empty array
 
@@ -70,6 +73,8 @@ app.post('/api/assignments', async (req, res) => {
         // Check if answerImage is present in the answer object
         if (answer.answerImage && req.files && req.files[answer.answerImage]) {
           formattedAnswer.answerImage = req.files[answer.answerImage][0].path; // Get the path of answer image
+          const { filename, path: filepath } = req.files[answer.answerImage][0];
+          formattedAnswer.answerImage = { filename, filepath };
         }
         return formattedAnswer;
       });
@@ -82,9 +87,9 @@ app.post('/api/assignments', async (req, res) => {
       subjectCode, 
       dateGiven, 
       questionText, 
-      questionImage, 
+      questionImage,
       correctionText, 
-      correctionImage, 
+      correctionImage,
       answers: formattedAnswers
     });
 
@@ -181,17 +186,38 @@ app.post('/api/set-terms', async (req, res) => {
     }
   });
 
+  app.get('/api/assignments/subject/:subjectCode', async (req, res) => {
+    try {
+      const assignment = await Assignment.findOne({ subjectCode: req.params.subjectCode });
+    
+      if (!assignment) {
+        return res.status(404).send('Assignment not found');
+      }
+    
+      // Here you would send the assignment data to the frontend
+      res.status(200).json(assignment);
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+    }
+  });
 
-// Endpoint for fetching files
-// app.get('/assignmentFiles', async (req, res) => {
-//   try {
-//     const files = await File.find();
-//     res.json(files);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send('Internal server error');
-//   }
-// });
+  // app.get('/api/assignments/subject/:subjectCode', async (req, res) => {
+  //   try {
+  //     const assignments = await Assignment.find({ subjectCode: req.params.subjectCode });
+  
+  //     if (!assignments || assignments.length === 0) {
+  //       return res.status(404).send('Assignments not found for this subject code');
+  //     }
+  
+  //     // Here you would send the assignments data to the frontend
+  //     res.status(200).json(assignments);
+  //   } catch (err) {
+  //     console.error(err);
+  //     res.status(500).send('Server Error');
+  //   }
+  // });
+  
 
   app.get('/api/studentsresults/:currentSession/:term/:selectedClass', async (req, res) => {
     try {
@@ -253,6 +279,7 @@ app.post('/api/set-terms', async (req, res) => {
       res.status(500).json({ message: 'Internal server error' });
     }
   });
+
   app.get('/api/allpayments', async (req, res) => {
     try {
       
@@ -262,7 +289,7 @@ app.post('/api/set-terms', async (req, res) => {
         return res.status(404).json({ message: 'payment not found' });
       }
   
-      res.status(200).json(term);
+      res.status(200).json(payment);
     } catch (error) {
       console.error('Error fetching payment:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -288,33 +315,4 @@ app.listen(port, () => {
   });
 
 
-  // PATCH route to handle partial updates by subjectCode
-app.patch('/studentassignments/:subjectCode', upload.fields([
-  { name: 'correctionImage', maxCount: 1 } // Single file for correctionImage
-]), async (req, res) => {
-  try {
-      const subjectCode = req.params.subjectCode;
-      const { correctionText } = req.body;
-
-      // Check if correctionText or correctionImage is provided in the request
-      const updateFields = {};
-      if (correctionText) {
-          updateFields.correctionText = correctionText;
-      }
-      if (req.files['correctionImage'] && req.files['correctionImage'].length > 0) {
-          updateFields.correctionImage = req.files['correctionImage'][0].path;
-      }
-
-      // Update the assignment with the provided fields
-      const updatedAssignment = await Assignment.findOneAndUpdate({ subjectCode }, updateFields, { new: true });
-
-      if (!updatedAssignment) {
-          return res.status(404).json({ message: 'Assignment not found' });
-      }
-
-      res.status(200).json({ message: 'Assignment updated successfully', updatedAssignment });
-  } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Internal server error' });
-  }
-});
+  

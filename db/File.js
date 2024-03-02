@@ -8,16 +8,25 @@ const answerSchema = new mongoose.Schema({
     firstname: String,
     surname: String,
     datePosted: String,
-    answerImage: String,
+    answerImage: {
+        filename: String,
+        filepath: String
+    },
 });
 
 const assignmentSchema = new mongoose.Schema({
     subjectCode: String,
     dateGiven: String,
     questionText: String,
-    questionImage: String,
+    questionImage: {
+        filename: String,
+        filepath: String
+    },
     correctionText: String,
-    correctionImage: String,
+    correctionImage: {
+        filename: String,
+        filepath: String
+    },
     answers: [answerSchema] // Array of answer objects
 });
 
