@@ -43,7 +43,7 @@ app.use(upload.fields([{ name: 'questionImage', maxCount: 1 }, { name: 'correcti
 app.post('/api/assignments', async (req, res) => {
   try {
     
-    const { subjectCode, dateGiven, questionText, correctionText, answers } = req.body;
+    const {title, topic, deadline, subjectCode, dateGiven, questionText, correctionText, answers } = req.body;
     let questionImage = null;
     let correctionImage = null;
 
@@ -84,6 +84,9 @@ app.post('/api/assignments', async (req, res) => {
      
 
     const assignment = new Assignment({ 
+      title,
+      topic,
+      deadline,
       subjectCode, 
       dateGiven, 
       questionText, 
@@ -102,73 +105,10 @@ app.post('/api/assignments', async (req, res) => {
   }
 });
 
-app.post('/api/assignments/update-answers/:subjectCode', async (req, res) => {
-  try {
-    const { subjectCode } = req.params;
-    const { answers } = req.body;
-
-    if (!subjectCode || !answers) {
-      return res.status(400).send('Subject code and answers are required.');
-    }
-
-    const assignment = await Assignment.findOne({ subjectCode });
-
-    if (!assignment) {
-      return res.status(404).send('Assignment not found for this subject code.');
-    }
-
-    // Update answers in the formattedAnswers array based on admission
-    assignment.answers.forEach(assignmentAnswer => {
-      const updatedAnswer = answers.find(updatedAnswer => updatedAnswer.admission === assignmentAnswer.admission);
-      if (updatedAnswer) {
-        assignmentAnswer.firstname = updatedAnswer.firstname || assignmentAnswer.firstname;
-        assignmentAnswer.surname = updatedAnswer.surname || assignmentAnswer.surname;
-        assignmentAnswer.datePosted = updatedAnswer.datePosted || assignmentAnswer.datePosted;
-        assignmentAnswer.answerImage = updatedAnswer.answerImage || assignmentAnswer.answerImage;
-      }
-    });
-
-    await assignment.save();
-
-    res.status(200).send('Answers updated successfully.');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server Error');
-  }
-});
 
 
-app.post('/api/assignments/update-correction/:subjectCode', async (req, res) => {
-  try {
-    const { subjectCode } = req.params;
-    const { correctionText, correctionImage } = req.body;
 
-    if (!subjectCode || !correctionText) {
-      return res.status(400).send('Subject code and correction text are required.');
-    }
 
-    const assignment = await Assignment.findOne({ subjectCode });
-
-    if (!assignment) {
-      return res.status(404).send('Assignment not found for this subject code.');
-    }
-
-    // Update correctionText
-    assignment.correctionText = correctionText;
-
-    // Update correctionImage if provided
-    if (correctionImage) {
-      assignment.correctionImage = correctionImage;
-    }
-
-    await assignment.save();
-
-    res.status(200).send('Correction data updated successfully.');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server Error');
-  }
-});
 
 
 app.post('/api/paymentreference', async (req, res) => {
@@ -227,7 +167,7 @@ app.post('/api/set-terms', async (req, res) => {
 
   app.get('/api/assignments/subject/:subjectCode', async (req, res) => {
     try {
-      const assignment = await Assignment.findOne({ subjectCode: req.params.subjectCode });
+      const assignment = await Assignment.find({ subjectCode: req.params.subjectCode });
     
       if (!assignment) {
         return res.status(404).send('Assignment not found');
@@ -380,6 +320,103 @@ app.post('/api/set-terms', async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  app.put('/api/assignments/update-answers/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { answers } = req.body;
+  
+      if (!id || !answers || !Array.isArray(answers)) {
+        return res.status(400).send('Assignment ID and an array of answers are required.');
+      }
+  
+      const assignment = await Assignment.findById(id);
+  
+      if (!assignment) {
+        return res.status(404).send('Assignment not found.');
+      }
+  
+      // Update answers in the assignment object
+      answers.forEach(updatedAnswer => {
+        const existingAnswer = assignment.answers.find(ans => ans._id.toString() === updatedAnswer._id.toString());
+        if (existingAnswer) {
+          // Update only the provided fields for the answer
+          if (updatedAnswer.firstname) {
+            existingAnswer.firstname = updatedAnswer.firstname;
+          }
+          if (updatedAnswer.surname) {
+            existingAnswer.surname = updatedAnswer.surname;
+          }
+          if (updatedAnswer.datePosted) {
+            existingAnswer.datePosted = updatedAnswer.datePosted;
+          }
+          // Handle answerImage if provided
+          if (req.files && req.files['answerImage']) {
+            const { filename, path: filepath } = req.files['answerImage'][0];
+            existingAnswer.answerImage = { filename, filepath };
+          }
+        } else {
+          // If answer doesn't exist, add it to the array
+          const newAnswer = { ...updatedAnswer };
+          if (req.files && req.files['answerImage']) {
+            const { filename, path: filepath } = req.files['answerImage'][0];
+            newAnswer.answerImage = { filename, filepath };
+          }
+          assignment.answers.push(newAnswer);
+        }
+      });
+  
+      await assignment.save();
+  
+      res.status(200).send('Answers updated successfully.');
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+    }
+  });
+  
+  
+
+  app.put('/api/assignments/update-correction/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { correctionText } = req.body;
+      let correctionImage = null;
+  
+      if (!id) {
+        return res.status(400).send('Assignment ID is required.');
+      }
+  
+      const assignment = await Assignment.findById(id);
+  
+      if (!assignment) {
+        return res.status(404).send('Assignment not found.');
+      }
+  
+      // Update correctionText if provided
+      if (correctionText) {
+        assignment.correctionText = correctionText;
+      }
+  
+      // Check if correctionImage is provided
+      if (req.files && req.files['correctionImage']) {
+        correctionImage = req.files['correctionImage'][0].path; // Get the path of correction image
+        const { filename, path: filepath } = req.files['correctionImage'][0];
+        correctionImage = { filename, filepath };
+      }
+  
+      // Update assignment's correctionImage field
+      assignment.correctionImage = correctionImage;
+  
+      await assignment.save();
+  
+      res.status(200).send('Correction data updated successfully.');
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+    }
+  });
+  
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
