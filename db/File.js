@@ -15,8 +15,11 @@ const answerSchema = new mongoose.Schema({
 });
 
 const assignmentSchema = new mongoose.Schema({
+    title: String,
+    topic: String,
     subjectCode: String,
     dateGiven: String,
+    deadline: String,
     questionText: String,
     questionImage: {
         filename: String,

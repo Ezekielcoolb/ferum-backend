@@ -102,35 +102,74 @@ app.post('/api/assignments', async (req, res) => {
   }
 });
 
-// POST route to handle uploading answers
-app.post('/api/studentanswers/:subjectCode', upload.single('answerImage'), async (req, res) => {
+app.post('/api/assignments/update-answers/:subjectCode', async (req, res) => {
   try {
-      const subjectCode = req.params.subjectCode;
-      const { admission, firstname, surname } = req.body;
+    const { subjectCode } = req.params;
+    const { answers } = req.body;
 
-      // Check if the assignment exists
-      const assignment = await Assignment.findOne({ subjectCode });
-      if (!assignment) {
-          return res.status(404).json({ message: 'Assignment not found' });
+    if (!subjectCode || !answers) {
+      return res.status(400).send('Subject code and answers are required.');
+    }
+
+    const assignment = await Assignment.findOne({ subjectCode });
+
+    if (!assignment) {
+      return res.status(404).send('Assignment not found for this subject code.');
+    }
+
+    // Update answers in the formattedAnswers array based on admission
+    assignment.answers.forEach(assignmentAnswer => {
+      const updatedAnswer = answers.find(updatedAnswer => updatedAnswer.admission === assignmentAnswer.admission);
+      if (updatedAnswer) {
+        assignmentAnswer.firstname = updatedAnswer.firstname || assignmentAnswer.firstname;
+        assignmentAnswer.surname = updatedAnswer.surname || assignmentAnswer.surname;
+        assignmentAnswer.datePosted = updatedAnswer.datePosted || assignmentAnswer.datePosted;
+        assignmentAnswer.answerImage = updatedAnswer.answerImage || assignmentAnswer.answerImage;
       }
+    });
 
-      // Add the new answer to the answers array
-      assignment.answers.push({
-          admission,
-          firstname,
-          surname,
-          answerImage: req.file ? req.file.path : null // Path to uploaded answerImage if available
-      });
+    await assignment.save();
 
-      // Save the updated assignment
-      await assignment.save();
-
-      res.status(201).json({ message: 'Answer uploaded successfully', assignment });
-  } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Internal server error' });
+    res.status(200).send('Answers updated successfully.');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
   }
 });
+
+
+app.post('/api/assignments/update-correction/:subjectCode', async (req, res) => {
+  try {
+    const { subjectCode } = req.params;
+    const { correctionText, correctionImage } = req.body;
+
+    if (!subjectCode || !correctionText) {
+      return res.status(400).send('Subject code and correction text are required.');
+    }
+
+    const assignment = await Assignment.findOne({ subjectCode });
+
+    if (!assignment) {
+      return res.status(404).send('Assignment not found for this subject code.');
+    }
+
+    // Update correctionText
+    assignment.correctionText = correctionText;
+
+    // Update correctionImage if provided
+    if (correctionImage) {
+      assignment.correctionImage = correctionImage;
+    }
+
+    await assignment.save();
+
+    res.status(200).send('Correction data updated successfully.');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
 
 app.post('/api/paymentreference', async (req, res) => {
   try {
@@ -202,6 +241,38 @@ app.post('/api/set-terms', async (req, res) => {
     }
   });
 
+  app.get('/api/assignments/student/:id', async (req, res) => {
+    try {
+      const assignment = await Assignment.findById(req.params.id);
+    
+      if (!assignment) {
+        return res.status(404).send('Assignment not found');
+      }
+    
+      // Here you would send the assignment data to the frontend
+      res.status(200).json(assignment);
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+    }
+  });
+  
+
+  app.get('/api/assignments/student/subjects', async (req, res) => {
+    try {
+      const assignment = await Assignment.find();
+    
+      if (!assignment) {
+        return res.status(404).send('Assignment not found');
+      }
+    
+      // Here you would send the assignment data to the frontend
+      res.status(200).json(assignment);
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+    }
+  });
   // app.get('/api/assignments/subject/:subjectCode', async (req, res) => {
   //   try {
   //     const assignments = await Assignment.find({ subjectCode: req.params.subjectCode });
