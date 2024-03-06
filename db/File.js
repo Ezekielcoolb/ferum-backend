@@ -17,6 +17,7 @@ const answerSchema = new mongoose.Schema({
 const assignmentSchema = new mongoose.Schema({
     title: String,
     topic: String,
+    category: String,
     subjectCode: String,
     dateGiven: String,
     deadline: String,

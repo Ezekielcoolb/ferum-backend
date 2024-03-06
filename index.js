@@ -43,7 +43,7 @@ app.use(upload.fields([{ name: 'questionImage', maxCount: 1 }, { name: 'correcti
 app.post('/api/assignments', async (req, res) => {
   try {
     
-    const {title, topic, deadline, subjectCode, dateGiven, questionText, correctionText, answers } = req.body;
+    const {title, topic, category, deadline, subjectCode, dateGiven, questionText, correctionText, answers } = req.body;
     let questionImage = null;
     let correctionImage = null;
 
@@ -87,6 +87,7 @@ app.post('/api/assignments', async (req, res) => {
       title,
       topic,
       deadline,
+      category,
       subjectCode, 
       dateGiven, 
       questionText, 
