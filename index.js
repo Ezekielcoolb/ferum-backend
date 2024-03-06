@@ -199,7 +199,7 @@ app.post('/api/set-terms', async (req, res) => {
   });
   
 
-  app.get('/api/assignments/student/subjects', async (req, res) => {
+  app.get('/api/get-all-assignments', async (req, res) => {
     try {
       const assignment = await Assignment.find();
     
@@ -214,22 +214,7 @@ app.post('/api/set-terms', async (req, res) => {
       res.status(500).send('Server Error');
     }
   });
-  // app.get('/api/assignments/subject/:subjectCode', async (req, res) => {
-  //   try {
-  //     const assignments = await Assignment.find({ subjectCode: req.params.subjectCode });
-  
-  //     if (!assignments || assignments.length === 0) {
-  //       return res.status(404).send('Assignments not found for this subject code');
-  //     }
-  
-  //     // Here you would send the assignments data to the frontend
-  //     res.status(200).json(assignments);
-  //   } catch (err) {
-  //     console.error(err);
-  //     res.status(500).send('Server Error');
-  //   }
-  // });
-  
+
 
   app.get('/api/studentsresults/:currentSession/:term/:selectedClass', async (req, res) => {
     try {
