@@ -309,77 +309,50 @@ app.post('/api/set-terms', async (req, res) => {
 
   app.put('/api/assignments/update-answers/:id', async (req, res) => {
     try {
-      const { id } = req.params;
-      const { answers } = req.body;
-  
-      if (!id || !answers || !Array.isArray(answers)) {
-        return res.status(400).send('Assignment ID and an array of answers are required.');
-      }
-  
-      const assignment = await Assignment.findById(id);
-  
-      if (!assignment) {
-        return res.status(404).send('Assignment not found.');
-      }
-  
-      let formattedAnswers = []; // Default to an empty array
+        const { id } = req.params;
+        const { answers } = req.body;
 
-    if (answers && answers.length > 0) {
-      formattedAnswers = answers.map(answer => {
-        const formattedAnswer = {
-          admission: answer.admission,
-          firstname: answer.firstname,
-          surname: answer.surname,
-          datePosted: answer.datePosted,
-          answerImage: null // Set answerImage to null by default
-        };
-        // Check if answerImage is present in the answer object
-        if (answer.answerImage && req.files && req.files[answer.answerImage]) {
-          formattedAnswer.answerImage = req.files[answer.answerImage][0].path; // Get the path of answer image
-          const { filename, path: filepath } = req.files[answer.answerImage][0];
-          formattedAnswer.answerImage = { filename, filepath };
+        if (!id || !answers || !Array.isArray(answers)) {
+            return res.status(400).send('Assignment ID and an array of answers are required.');
         }
-        return formattedAnswer;
-      });
-    }
-      // Update answers in the assignment object
-      // answers.forEach(updatedAnswer => {
-      //   const existingAnswer = assignment.answers.find(ans => ans._id.toString() === updatedAnswer._id.toString());
-      //   if (existingAnswer) {
-      //     // Update only the provided fields for the answer
-      //     if (updatedAnswer.firstname) {
-      //       existingAnswer.firstname = updatedAnswer.firstname;
-      //     }
-      //     if (updatedAnswer.surname) {
-      //       existingAnswer.surname = updatedAnswer.surname;
-      //     }
-      //     if (updatedAnswer.datePosted) {
-      //       existingAnswer.datePosted = updatedAnswer.datePosted;
-      //     }
-      //     // Handle answerImage if provided
-      //     if (req.files && req.files['answerImage']) {
-      //       const { filename, path: filepath } = req.files['answerImage'][0];
-      //       existingAnswer.answerImage = { filename, filepath };
-      //     }
-      //   } else {
-      //     // If answer doesn't exist, add it to the array
-      //     const newAnswer = { ...updatedAnswer };
-      //     if (req.files && req.files['answerImage']) {
-      //       const { filename, path: filepath } = req.files['answerImage'][0];
-      //       newAnswer.answerImage = { filename, filepath };
-      //     }
-      //     assignment.answers.push(newAnswer);
-      //   }
-      // });
-      assignment.answers = formattedAnswers
-      await assignment.save();
-  
-      res.status(200).send('Answers updated successfully.');
+
+        const assignment = await Assignment.findById(id);
+
+        if (!assignment) {
+            return res.status(404).send('Assignment not found.');
+        }
+
+        // Update answers in the assignment object
+        answers.forEach(updatedAnswer => {
+            const existingAnswer = assignment.answers.find(ans => ans._id.toString() === updatedAnswer._id.toString());
+            if (existingAnswer) {
+                // Update only the provided fields for the answer
+                existingAnswer.admission = updatedAnswer.admission || existingAnswer.admission;
+                existingAnswer.firstname = updatedAnswer.firstname || existingAnswer.firstname;
+                existingAnswer.surname = updatedAnswer.surname || existingAnswer.surname;
+                existingAnswer.datePosted = updatedAnswer.datePosted || existingAnswer.datePosted;
+
+                // Update answerImage if provided
+                if (updatedAnswer.answerImage) {
+                    if (req.files && req.files[updatedAnswer.answerImage]) {
+                        const { filename, path: filepath } = req.files[updatedAnswer.answerImage][0];
+                        existingAnswer.answerImage = { filename, filepath };
+                    }
+                }
+            }
+        });
+
+        await assignment.save();
+
+        res.status(200).send('Answers updated successfully.');
     } catch (err) {
-      console.error(err);
-      res.status(500).send('Server Error');
+        console.error(err);
+        res.status(500).send('Server Error');
     }
-  });
+});
+
+
+
   
   
 
