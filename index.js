@@ -309,39 +309,44 @@ app.post('/api/set-terms', async (req, res) => {
 
   app.put('/api/assignments/update-answers/:id', async (req, res) => {
     try {
-      const { id } = req.params;
-      const { answers } = req.body;
-  
-       // Find the assignment by ID
-       const assignment = await Assignment.findById(id);
+        const { id } = req.params;
+        const { admission, firstname, surname, datePosted } = req.body;
 
-       if (!assignment) {
-           return res.status(404).send('Assignment not found.');
-       }
-     
-        // Update answers if provided
-        if (answers && Array.isArray(answers)) {
-          assignment.answers = answers.map(answer => ({
-              admission: answer.admission,
-              firstname: answer.firstname,
-              surname: answer.surname,
-              datePosted: answer.datePosted,
-              answerImage: answer.answerImage ? {
-                  filename: answer.answerImage.filename,
-                  filepath: answer.answerImage.filepath
-              } : null
-          }));
+        // Find the assignment by ID
+        const assignment = await Assignment.findById(id);
+
+        if (!assignment) {
+            return res.status(404).send('Assignment not found.');
         }
 
-     
-      await assignment.save();
-  
-      res.status(200).send('Answers updated successfully.');
+        // Create a new answer object
+        const newAnswer = {
+            admission,
+            firstname,
+            surname,
+            datePosted,
+            answerImage: null // Initialize answerImage to null
+        };
+
+        // Check if answerImage is provided in the request body and files
+        if (req.files && req.files['answerImage']) {
+            const { filename, path: filepath } = req.files['answerImage'][0];
+            newAnswer.answerImage = { filename, filepath }; // Set answerImage if provided
+        }
+
+        // Push the new answer to the answers array
+        assignment.answers.push(newAnswer);
+
+        await assignment.save();
+
+        res.status(200).send('Answers updated successfully.');
     } catch (err) {
-      console.error(err);
-      res.status(500).send('Server Error');
+        console.error(err);
+        res.status(500).send('Server Error');
     }
-  });
+});
+
+
   
   
 
