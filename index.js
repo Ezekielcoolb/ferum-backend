@@ -325,13 +325,13 @@ app.post('/api/set-terms', async (req, res) => {
             firstname,
             surname,
             datePosted,
-            answerImage: null // Initialize answerImage to null
+            answerImage: null 
         };
 
         // Check if answerImage is provided in the request body and files
         if (req.files && req.files['answerImage']) {
             const { filename, path: filepath } = req.files['answerImage'][0];
-            newAnswer.answerImage = { filename, filepath }; // Set answerImage if provided
+            newAnswer.answerImage = { filename, filepath }; 
         }
 
         // Push the new answer to the answers array
